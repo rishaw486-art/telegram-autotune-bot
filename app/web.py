@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import logging
+import os
 
 from aiogram import Bot
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -7,6 +9,9 @@ from .bot import build_dispatcher
 from .config import settings
 from .db import init_db
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("autotune")
+
 bot = Bot(settings.telegram_bot_token)
 dp = build_dispatcher()
 
@@ -14,8 +19,14 @@ dp = build_dispatcher()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await init_db()
-    if settings.public_bot_url:
-        await bot.set_webhook(f"{settings.public_bot_url.rstrip('/')}/telegram/webhook/{settings.webhook_secret}", drop_pending_updates=False)
+    public_url = settings.public_bot_url.strip().rstrip("/") or os.getenv("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
+    if public_url:
+        webhook_url = f"{public_url}/telegram/webhook/{settings.webhook_secret}"
+        await bot.set_webhook(webhook_url, drop_pending_updates=False, secret_token=settings.webhook_secret)
+        info = await bot.get_webhook_info()
+        logger.info("Telegram webhook configured: %s (pending=%s, last_error=%s)", webhook_url, info.pending_update_count, info.last_error_message)
+    else:
+        logger.error("No PUBLIC_BOT_URL or RENDER_EXTERNAL_URL; Telegram commands cannot arrive until a webhook URL is configured")
     yield
     await bot.session.close()
 
