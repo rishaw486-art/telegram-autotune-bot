@@ -3,7 +3,6 @@ services:
     name: telegram-autotune-web
     runtime: docker
     dockerfilePath: ./Dockerfile
-    dockerCommand: uvicorn app.web:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: TELEGRAM_BOT_TOKEN
