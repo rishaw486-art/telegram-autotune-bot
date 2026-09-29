@@ -28,9 +28,19 @@ async def root():
     return {"service": "telegram-autotune-bot", "status": "ok"}
 
 
+@app.head("/")
+async def root_head():
+    return None
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.head("/health")
+async def health_head():
+    return None
 
 
 @app.post("/telegram/webhook/{secret}")
