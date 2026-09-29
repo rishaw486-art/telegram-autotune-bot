@@ -25,7 +25,7 @@ async def lifespan(_: FastAPI):
             public_url = public_url[: -len(suffix)]
             break
     if public_url:
-        webhook_url = f"{public_url}/telegram/webhook/{settings.webhook_secret}"
+        webhook_url = f"{public_url}/telegram/webhook"
         await bot.set_webhook(webhook_url, drop_pending_updates=False, secret_token=settings.webhook_secret)
         info = await bot.get_webhook_info()
         logger.info("Telegram webhook configured: %s (pending=%s, last_error=%s)", webhook_url, info.pending_update_count, info.last_error_message)
@@ -84,6 +84,7 @@ async def webhook_status():
     info = await bot.get_webhook_info()
     return {
         "url": info.url,
+        "expected_url_suffix": "/telegram/webhook",
         "pending_update_count": info.pending_update_count,
         "last_error_message": info.last_error_message,
         "last_error_date": info.last_error_date,
