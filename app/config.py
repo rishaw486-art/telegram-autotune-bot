@@ -1,3 +1,5 @@
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,12 +22,34 @@ class Settings(BaseSettings):
     def normalize_database_url(cls, value: str) -> str:
         value = str(value)
         if value.startswith("postgres://"):
-            return "postgresql+asyncpg://" + value[len("postgres://"):]
-        if value.startswith("postgresql://"):
-            return "postgresql+asyncpg://" + value[len("postgresql://"):]
-        if value.startswith("postgresql+psycopg://"):
-            return "postgresql+asyncpg://" + value[len("postgresql+psycopg://"):]
-        return value
+            value = "postgresql+asyncpg://" + value[len("postgres://"):]
+        elif value.startswith("postgresql://"):
+            value = "postgresql+asyncpg://" + value[len("postgresql://"):]
+        elif value.startswith("postgresql+psycopg://"):
+            value = "postgresql+asyncpg://" + value[len("postgresql+psycopg://"):]
+        parts = urlsplit(value)
+        query = parse_qsl(parts.query, keep_blank_values=True)
+        normalized = []
+        sslmode = None
+        for key, item in query:
+            if key == "sslmode":
+                sslmode = item
+            elif key != "channel_binding":
+                normalized.append((key, item))
+        if sslmode and not any(key == "ssl" for key, _ in normalized):
+            normalized.append(("ssl", "require" if sslmode in {"require", "verify-ca", "verify-full"} else sslmode))
+        hostname = parts.hostname
+        if hostname and parts.port is None:
+            userinfo = ""
+            if parts.username:
+                userinfo = parts.username
+                if parts.password:
+                    userinfo += ":" + parts.password
+                userinfo += "@"
+            netloc = f"{userinfo}{hostname}:5432"
+        else:
+            netloc = parts.netloc
+        return urlunsplit((parts.scheme, netloc, parts.path, urlencode(normalized), parts.fragment))
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

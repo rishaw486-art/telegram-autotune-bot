@@ -28,7 +28,7 @@ uvicorn app.web:app --reload --port 10000
 python worker.py
 ```
 
-Set `DATABASE_URL` to a Neon connection string using the `postgresql+asyncpg://` scheme. For Neon, keep `?ssl=require` in the URL.
+Set `DATABASE_URL` to a Neon connection string using the `postgresql+asyncpg://` scheme, including port `5432` and `?ssl=require`. The app also converts common `sslmode=require` URLs automatically. Render injects the web-service `PORT`; do not hard-code it.
 
 ## Render deployment
 
